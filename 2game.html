@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Tenis Brinck Game</title>
+</head>
+<body>
+	<canvas id="gameCanvas" width="800" height="600">
+		
+	</canvas>
+<script type="text/javascript">
+
+     // <!--posisi bola  -->
+	var ballX= 75;
+	var ballY= 75;
+	var ballSpeedX = 7;
+	var ballSpeedY = 7;
+
+	// posisi paddle
+	const PADDLE_WIDTH =100;
+	const PADDLE_THICK =10;
+	const PADDLE_DIST_EDGE = 60;
+
+	var paddleX =400;
+
+	// brickGrid[0] = false;
+	const BRICK_W = 80;
+	const BRICK_GAP= 2;
+	const BRICK_H =20;
+	const BRICK_COL =10;
+	const BRICK_ROW = 14;
+
+	// array untuk membuat bata
+	var brickGrid = new Array(BRICK_COL*BRICK_ROW);
+	var brickLeft =0;
+	// posisi mouse var
+	var mouseX;
+	var mouseY;
+
+	// screen play var
+	var canvas, canvasContext;
+
+	// fugsi untuk mengambil posisi mause
+	function updateMousepos(evt){
+		var rect =canvas.getBoundingClientRect();
+		var root = document.documentElement;
+		mouseX = evt.clientX - rect.left-root.scrollLeft;
+		mouseY = evt.clientY - rect.top-root.scrollTop;
+
+		paddleX = mouseX - PADDLE_WIDTH/2;
+
+		// ballX = mouseX;
+		// ballY = mouseY;
+
+		// ballSpeedX = 4;
+		// ballSpeedY = -4;
+
+	}
+	// fungsu untuk memasukan nilai true pada array batu bata
+	function brickReset(){
+		// j adalh jumlah index
+		brickLeft =0;
+		var j;
+		for(j=0; j<3 *BRICK_COL; j++){
+			brickGrid[j] =false;
+			}
+		for(;j<BRICK_COL*BRICK_ROW; j++){
+			// brickGrid[j] =true
+			brickGrid[j]=true;
+			brickLeft++;
+		}
+		// brickGrid[15] = false;
+	}
+	// agar semua kode dieksekusi saat semua elemen selesai di muat
+	window.onload= function (){
+	
+	canvas = document.querySelector('#gameCanvas');
+	canvasContext = canvas.getContext('2d');
+	// membuat efek animasi
+	var fps = 30;
+	setInterval(updateAll, 1000/fps);
+	// memasukan fungsi updateMousepos pada event mousemove yang berfunsi menagani pergerakan mause 
+	canvas.addEventListener('mousemove', updateMousepos)
+	// memanggil fingsi untuk membuat bata
+	brickReset();
+	reset();
+
+}
+// membuat posisi bola berada ditengah
+function reset(){
+	ballX = canvas.width/2;
+	ballY = canvas.height/2;
+}
+// berfungsi untuk menaruh fungsi pergerakan
+function updateAll(){
+	moveAll();
+	drawAll();
+}
+// mengtur pergerakan bola dan menagani efek nya
+function ballMove(){
+	ballX+= ballSpeedX;
+	ballY+= ballSpeedY;
+
+	if (ballY < 0 && ballSpeedY<0.0){ // top
+		ballSpeedY *=-1;
+	}if (ballY > canvas.height){ // bottom
+		reset();
+		brickReset();
+	}
+	if (ballX < 0 && ballSpeedX<0.0){ // left
+		ballSpeedX *=-1;
+	}if (ballX > canvas.width && ballSpeedX>0.0){ //right
+		ballSpeedX *=-1;
+	}
+
+}
+// 
+function isBrickAtColRow(col, row){
+	if(col >= 0 && col< BRICK_COL && 
+		row>=0 && row< BRICK_ROW){
+
+	var brickIndexUnderCor = rowColToArrayIndex(col, row);
+	return brickGrid[brickIndexUnderCor]; 
+	}else{
+		return false;
+	}
+}
+
+// menghendle animasi bata
+function ballBrickHandling(){
+
+	var ballBrickCol = Math.floor(ballX/BRICK_W);
+	var ballBrickRow = Math.floor(ballY/BRICK_H);
+	var brickIndexUnderBall = rowColToArrayIndex(ballBrickCol, ballBrickRow);
+	// membuat bata menghilang dan bola memantul
+	if (ballBrickCol >= 0 && ballBrickCol< BRICK_COL && 
+		ballBrickRow>=0 && ballBrickRow< BRICK_ROW) {
+
+		if(isBrickAtColRow(ballBrickCol, ballBrickRow)){
+			brickGrid[brickIndexUnderBall]= false;
+			ballSpeedY *=-1;
+			brickLeft--;
+			console.log(brickLeft);
+
+			var prevBallX = ballX - ballSpeedX;
+			var prevBallY = ballY - ballSpeedY;
+
+			var prevBallCol = Math.floor(prevBallX/ BRICK_W);
+			var prevBallRow = Math.floor(prevBallY/ BRICK_H);
+
+			var bothTestsFailed = true;
+			// 
+
+			if(prevBallCol != ballBrickCol){
+				if (isBrickAtColRow(prevBrickCol, prevBrickRow)==false) {
+				ballSpeedX *= -1;
+				bothTestsFailed = false;
+				}
+			}
+			// 
+			if(prevBallRow != ballBrickRow){
+
+				if (isBrickAtColRow(ballBrickCol, prevBrickRow)==false){
+				ballSpeedY *=-1;
+				bothTestsFailed = false;
+
+				}
+				// 
+				if(bothTestsFailed)
+					ballSpeedY *=-1;
+					ballSpeedX *=-1;
+			}
+
+		
+		}// akhir fungsi if membuat bata menghilang dan membuat bola memantul terkena bata
+	}//akhir fungsi if untuk melacak posisi bola tehadap index bata
+}//fungsi
+
+//mengatur gerakan bola saat menyentuh paddle 
+function ballPaddleHandling(){
+	var paddleTopEdgeY = canvas.height- PADDLE_DIST_EDGE;
+	var paddleBottomEdgeY = paddleTopEdgeY+PADDLE_THICK;
+	var paddleLeftEdgeX = paddleX;
+	var paddleRightEdgeX = paddleX+ PADDLE_WIDTH;
+	// memebuat bola memantul saat terkene paddle pada koordinat x
+	if (ballY> paddleTopEdgeY && // below top paddle
+		ballY< paddleBottomEdgeY&& // above bottom paddle
+		ballX> paddleLeftEdgeX&& // right the left side of paddle
+		ballX< paddleRightEdgeX) {// left the right side of paddle 
+			ballSpeedY *= -1;
+
+			var centerOfPaddleX = paddleX + PADDLE_WIDTH/2;
+			var ballDistFromPaddleCenterX = ballX - centerOfPaddleX;
+			// kordiana y agar bisa mengatur sumbux
+			 ballSpeedX = ballDistFromPaddleCenterX * 0.30;
+
+			 if(brickLeft ==0){
+			 	brickReset();
+			 }//out of brick
+	}// ball center insdide paddle
+
+}// rend of ballPaddleHandling
+function moveAll(){
+
+	ballMove();
+	ballBrickHandling();
+	ballPaddleHandling();
+
+
+}
+// menadai posisi bersadarkan index dari bata 
+function rowColToArrayIndex(col, row){
+	return col +(BRICK_COL* row);
+}	
+
+function drawBrick(){
+	for(var eachRow = 0; eachRow<BRICK_ROW; eachRow++){
+	for (var eachCol=0; eachCol<BRICK_COL; eachCol++){
+		var arrayIndex = rowColToArrayIndex(eachCol, eachRow);
+		if(brickGrid[arrayIndex]){
+	colorRect(BRICK_W*eachCol, BRICK_H*eachRow, BRICK_W - BRICK_GAP, BRICK_H- BRICK_GAP, 'blue');
+		 }// kurung if
+	  } //kurung for col
+	}//kurung for row
+}//kurung akhir fungsi
+
+function drawAll(){
+	colorRect(0, 0, canvas.width, canvas.height, 'black');
+
+	circle(ballX, ballY, 10, '#cf7500');
+
+	colorRect(paddleX, canvas.height- PADDLE_DIST_EDGE, PADDLE_WIDTH, PADDLE_THICK, 'blue');
+	// menggmabar batu bata
+	drawBrick();
+	// menampilakan posisi moause
+	// var mouseBrickCol = Math.floor(mouseX/BRICK_W);
+	// var mouseBrickRow = Math.floor(mouseY/BRICK_H);
+	// var brickIndexUnderMouse = rowColToArrayIndex(mouseBrickCol, mouseBrickRow);
+	// colorText(mouseBrickCol+","+mouseBrickRow+":"+brickIndexUnderMouse, mouseX, mouseY, 'yellow');
+
+	// if (brickIndexUnderMouse>= 0 && brickIndexUnderMouse< BRICK_COL* BRICK_ROW) {
+	// 	brickGrid[brickIndexUnderMouse]= false;
+	// }
+}
+// menggambar elemen berbantuk prsegi
+function colorRect(leftX, topY, width, height, drawColor){
+	canvasContext.fillStyle = drawColor;
+	canvasContext.fillRect(leftX, topY, width, height);
+}
+// menggambat lingkaran
+function circle(centerx, centery, radius, drawColor){
+	canvasContext.fillStyle = drawColor;
+	canvasContext.beginPath();
+	canvasContext.arc(centerx, centery, radius, 0, Math.PI*2, true);
+	canvasContext.fill();
+}
+// membuat text
+function colorText(showWord, textX, textY, fillColor){
+	canvasContext.fillStyle = fillColor;
+	canvasContext.fillText(showWord, textX, textY);
+}
+	
+</script>
+</body>
+</html>
